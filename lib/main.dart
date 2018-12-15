@@ -25,6 +25,7 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
+
   final String title;
 
   @override
@@ -50,14 +51,18 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      body: Center(
-        child: ValueListenableBuilder(valueListenable: imageValueNotifier ?? ImageValueNotifier(), builder: (BuildContext context, ui.Image value, Widget child){
-          if(value == null) return CircularProgressIndicator();
-          print("image");
-          return RawImage(
-            image: value,
-          );
-        })
+      body: GestureDetector(
+        onTap: () {
+          imageValueNotifier.reset();
+        },
+        child: Center(
+            child: ValueListenableBuilder(valueListenable: imageValueNotifier ?? ImageValueNotifier(), builder: (BuildContext context, ui.Image value, Widget child){
+              if(value == null) return CircularProgressIndicator();
+              return RawImage(
+                image: value,
+              );
+            })
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _transformImage,
@@ -73,7 +78,11 @@ class _MyHomePageState extends State<MyHomePage> {
 class ImageValueNotifier extends ValueNotifier<ui.Image>{
   ImageValueNotifier() : super(null);
 
+  ui.Image initial = null;
 
+  void reset() {
+    value = initial;
+  }
 
   void loadImage(){
     ImageProvider imageProvider = AssetImage("assets/doggo.jpeg");
@@ -88,19 +97,22 @@ class ImageValueNotifier extends ValueNotifier<ui.Image>{
     completer.future.then((info) {
       ImageInfo imageInfo = info as ImageInfo;
       value = imageInfo.image;
+      initial = value;
     });
   }
 
   void changeImage () async {
     ByteData byteData = await value.toByteData();
     List<int> listInt = byteData.buffer.asUint8List();
-    List<int> converted = await spawnIsolate(listInt, value.width, value.height);
+
+    ui.Image temp = value;
+    value = null;
+    List<int> converted = await spawnIsolate(listInt, temp.width, temp.height);
     print("foi 1");
     ui.decodeImageFromList(converted, (image){
       print("foi 2");
       value = image;
     });
-
   }
 
 }
@@ -140,7 +152,7 @@ void insideIsolate(SendPort sendPort) async {
     List<int> converted = dartImage.encodeJpg(dartImage.gaussianBlur(image, 100));
     replyTo.send(converted);
 
-
-
   }
 }
+
+
