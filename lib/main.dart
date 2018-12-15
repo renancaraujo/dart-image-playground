@@ -104,6 +104,10 @@ class ImageValueNotifier extends ValueNotifier<ui.Image>{
       value = image;
     });
   }
+
+  void spawnIsolate() {
+
+  }
 }
 
 
