@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'dart:typed_data';
 
-import 'package:dartimage/daertimage_manipulation.dart';
+import 'package:dartimage/dartimage_manipulation.dart';
 import 'package:flutter/material.dart';
 
 import 'dart:ui' as ui;
