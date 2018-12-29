@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:isolate';
+
 import 'dart:typed_data';
 
+import 'package:dartimage/daertimage_manipulation.dart';
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as dartImage;
+
 import 'dart:ui' as ui;
 
 void main() => runApp(MyApp());
@@ -107,52 +108,11 @@ class ImageValueNotifier extends ValueNotifier<ui.Image>{
 
     ui.Image temp = value;
     value = null;
-    List<int> converted = await spawnIsolate(listInt, temp.width, temp.height);
-    print("foi 1");
+    List<int> converted = await doStuff(listInt, temp.width, temp.height);
     ui.decodeImageFromList(converted, (image){
-      print("foi 2");
       value = image;
     });
   }
 
 }
-
-
-Future<List<int>> spawnIsolate(List<int> listInt, int width, int height) async {
-  ReceivePort receivePort = new ReceivePort();
-  SendPort sendPort = receivePort.sendPort;
-  Isolate.spawn(insideIsolate, sendPort);
-
-  SendPort sendPort2 = await receivePort.first;
-
-  List<int> image = await sendReceive(sendPort2, [listInt, width, height]);
-
-  return image;
-}
-
-Future sendReceive(SendPort port, msg) {
-  ReceivePort response = new ReceivePort();
-  port.send([msg, response.sendPort]);
-  return response.first;
-}
-
-void insideIsolate(SendPort sendPort) async {
-
-  ReceivePort port = ReceivePort();
-  sendPort.send(port.sendPort);
-
-  await for (var msg in port) {
-    SendPort replyTo = msg[1];
-
-    List<int> listInt = msg[0][0];
-    int width = msg[0][1];
-    int height = msg[0][2];
-
-    dartImage.Image image = dartImage.Image.fromBytes(width, height, listInt);
-    List<int> converted = dartImage.encodeJpg(dartImage.gaussianBlur(image, 100));
-    replyTo.send(converted);
-
-  }
-}
-
 
