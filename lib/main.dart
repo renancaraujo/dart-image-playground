@@ -35,6 +35,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   ImageValueNotifier imageValueNotifier = ImageValueNotifier();
+  double contrast = 100.0;
 
   @override
   void initState() {
@@ -45,7 +46,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 
   void _transformImage() {
-    if(imageValueNotifier.value != null) imageValueNotifier.changeImage();
+    if(imageValueNotifier.value != null) imageValueNotifier.changeImage(contrast);
   }
 
   @override
@@ -56,13 +57,21 @@ class _MyHomePageState extends State<MyHomePage> {
         onTap: () {
           imageValueNotifier.reset();
         },
-        child: Center(
-            child: ValueListenableBuilder(valueListenable: imageValueNotifier ?? ImageValueNotifier(), builder: (BuildContext context, ui.Image value, Widget child){
+        child: Column(
+          children: <Widget>[
+            ValueListenableBuilder(valueListenable: imageValueNotifier ?? ImageValueNotifier(), builder: (BuildContext context, ui.Image value, Widget child){
               if(value == null) return CircularProgressIndicator();
               return RawImage(
                 image: value,
               );
+            }),
+            Slider(value: contrast, max: 200.0, min: 0.0,onChanged: (double newValue) {
+              setState(() {
+                contrast = newValue;
+              });
+              _transformImage();
             })
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -102,13 +111,10 @@ class ImageValueNotifier extends ValueNotifier<ui.Image>{
     });
   }
 
-  void changeImage () async {
-    ByteData byteData = await value.toByteData();
+  void changeImage (double contrast) async {
+    ByteData byteData = await initial.toByteData();
     List<int> listInt = byteData.buffer.asUint8List();
-
-    ui.Image temp = value;
-    value = null;
-    List<int> converted = await doStuff(listInt, temp.width, temp.height);
+    List<int> converted = await doStuff(listInt, initial.width, initial.height, contrast);
     ui.decodeImageFromList(converted, (image){
       value = image;
     });
