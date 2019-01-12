@@ -1,5 +1,5 @@
 import 'package:dartimage/isolate_manager.dart';
-import 'package:image/image.dart' as DartImage;
+
 import 'dart:isolate';
 
 
@@ -16,19 +16,11 @@ imageIsolate(List initialMessage) async{
     List<int> listInt = msg[0][0];
     int width = msg[0][1];
     int height = msg[0][2];
-    DartImage.Image image = DartImage.Image.fromBytes(width, height, listInt);
 
-    //image = dartImage.gaussianBlur(image, 4);
-    image = DartImage.contrast(image, 108.0);
-    image = DartImage.brightness(image, 8);
-
-    image = DartImage.fill(image, 0xff00ff);
-
-    List<int> converted = DartImage.encodeJpg(image);
 
     /***/
 
-    replyTo.send(converted);
+    replyTo.send(null);
   }
 }
 

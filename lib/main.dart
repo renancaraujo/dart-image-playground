@@ -108,7 +108,10 @@ class ImageValueNotifier extends ValueNotifier<ui.Image>{
 
     ui.Image temp = value;
     value = null;
-    List<int> converted = await doStuff(listInt, temp.width, temp.height);
+
+    BmpARGB32Header rgba32Header = BmpARGB32Header(temp.width, temp.height);
+    Uint8List converted = rgba32Header.getHeadered(listInt);
+
     ui.decodeImageFromList(converted, (image){
       value = image;
     });
@@ -116,3 +119,98 @@ class ImageValueNotifier extends ValueNotifier<ui.Image>{
 
 }
 
+class BmpARGB32Header{
+  int width;
+  int height;
+
+  Uint8List _bmp;
+  int baseHeaderSize = 122;
+
+  set bitmap(Uint8List bmp) => _bmp = bmp;
+  int get size => (width * height) * 4;
+  int get fileLength => baseHeaderSize + size;
+
+  BmpARGB32Header(this.width, this.height) :  assert(width & 3 == 0) {
+    _bmp = new Uint8List(fileLength);
+    ByteData bd = _bmp.buffer.asByteData();
+    bd.setUint8(0x0, 0x42);
+    bd.setUint8(0x1, 0x4d);
+    bd.setInt32(0x2, fileLength, Endian.little);
+    bd.setInt32(0xa, baseHeaderSize, Endian.little);
+    // info header
+    bd.setUint32(0xe, 108, Endian.little);
+    bd.setUint32(0x12, width, Endian.little);
+    bd.setUint32(0x16, height, Endian.little);
+    bd.setUint16(0x1a, 1, Endian.little);
+    bd.setUint32(0x1c, 32, Endian.little); // pixel size
+    bd.setUint32(0x1e, 3, Endian.little); //BI_BITFIELDS
+    bd.setUint32(0x22, size, Endian.little);
+    bd.setUint32(0x36, 0x000000ff, Endian.little);
+    bd.setUint32(0x3a, 0x0000ff00, Endian.little);
+    bd.setUint32(0x3e, 0x00ff0000, Endian.little);
+    bd.setUint32(0x42, 0xff000000, Endian.little);
+  }
+
+  Uint8List flipHorizontal(Uint8List bmp, int pixelLength){
+    int lineLength = (width * pixelLength);
+    int halfLine = lineLength ~/2;
+
+    for( int line = 0; line < height; line++)  {
+      int startOfLine = line * lineLength;
+      for(int relativeColumnStart = 0; relativeColumnStart < halfLine; relativeColumnStart+=pixelLength){
+        int pixelStart = startOfLine + relativeColumnStart;
+        int pixelEnd = pixelStart + pixelLength;
+
+        int relativeOppositePixelStart = lineLength - relativeColumnStart - pixelLength;
+        int oppositePixelStart = startOfLine + relativeOppositePixelStart;
+        int oppositePixelEnd = oppositePixelStart + pixelLength;
+
+        Uint8List oppositePixel = bmp.sublist(oppositePixelStart, oppositePixelEnd);
+        Uint8List targetPixel = bmp.sublist(pixelStart, pixelEnd);
+
+        bmp.setRange(oppositePixelStart, oppositePixelEnd, targetPixel);
+        bmp.setRange(pixelStart, pixelEnd, oppositePixel);
+      }
+    }
+
+    return bmp;
+  }
+
+  Uint8List flipVertical(Uint8List bmp, int pixelLength){
+    int lineLength = (width * pixelLength);
+    int halfHeight = height ~/2;
+    for(int line = 0; line < halfHeight; line++){
+      int startOfLine = line * lineLength;
+      int startOfOppositeLine = (height - 1 - line) * lineLength;
+      for(int column = 0; column < width; column++){
+        int pixelStart = startOfLine + column * 4;
+        int pixelEnd = pixelStart + pixelLength;
+
+        int oppositePixelStart = startOfOppositeLine + column * 4;
+        int oppositePixelEnd = oppositePixelStart + pixelLength;
+
+        Uint8List oppositePixel = bmp.sublist(oppositePixelStart, oppositePixelEnd);
+        Uint8List targetPixel = bmp.sublist(pixelStart, pixelEnd);
+
+        bmp.setRange(oppositePixelStart, oppositePixelEnd, targetPixel);
+        bmp.setRange(pixelStart, pixelEnd, oppositePixel);
+      }
+    }
+
+    return bmp;
+  }
+
+
+
+  Uint8List getHeadered(Uint8List bmp) {
+    assert(bmp.length == size);
+
+    Uint8List flipped = Uint8List.fromList(bmp);
+
+    //flipHorizontal(flipped, 4);
+    flipVertical(flipped, 4);
+
+    return Uint8List.fromList(_bmp)..setRange(baseHeaderSize, fileLength, flipped);
+  }
+
+}
